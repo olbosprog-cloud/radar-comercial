@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radar Comercial B2B - Prospecção e CRM para Lojistas</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+            },
+            darkBg: '#0f172a',
+            darkCard: '#1e293b',
+            darkBorder: '#334155',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+
+  <!-- Topbar -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50 px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+        <i data-lucide="crosshair" class="w-6 h-6 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+          Radar Comercial B2B
+          <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Goiânia & Região</span>
+        </h1>
+        <p class="text-xs text-slate-400">Prospecção de Lojistas & Comércio Físico com Enriquecimento</p>
+      </div>
+    </div>
+
+    <!-- Active Mode & Actions -->
+    <div class="flex items-center space-x-3">
+      <div class="flex items-center bg-slate-800/80 rounded-lg p-1 border border-slate-700 text-xs">
+        <span class="text-slate-400 px-2 flex items-center gap-1">
+          <i data-lucide="cpu" class="w-3.5 h-3.5"></i> Modo:
+        </span>
+        <button id="btn-mode-mock" onclick="switchDataMode('MOCK')" class="px-2.5 py-1 rounded-md transition font-medium text-slate-300 hover:text-white">MOCK</button>
+        <button id="btn-mode-free" onclick="switchDataMode('FREE')" class="px-2.5 py-1 rounded-md transition font-medium text-slate-300 hover:text-white">FREE</button>
+        <button id="btn-mode-prod" onclick="switchDataMode('PRODUCTION')" class="px-2.5 py-1 rounded-md transition font-medium text-slate-300 hover:text-white">PRODUCTION</button>
+      </div>
+
+      <button onclick="openConfigModal()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" title="Configurações e Chaves">
+        <i data-lucide="settings" class="w-4 h-4"></i>
+      </button>
+
+      <button onclick="openImportModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 flex items-center gap-1.5 transition">
+        <i data-lucide="upload" class="w-4 h-4"></i> Importar CSV
+      </button>
+
+      <a href="/api/leads/export" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white flex items-center gap-1.5 transition shadow-lg shadow-emerald-600/20">
+        <i data-lucide="download" class="w-4 h-4"></i> Exportar Leads
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+
+    <!-- Section 1: Painel de Busca e Filtros Comerciais -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <div class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+            <i data-lucide="search" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="font-semibold text-white text-base">Módulo 1: Captura Inteligente por Território & Atividade</h2>
+            <p class="text-xs text-slate-400">Selecione a cidade, os setores de Goiânia / Aparecida e o ramo do comércio desejado</p>
+          </div>
+        </div>
+        <div id="search-mode-indicator" class="text-xs font-medium px-3 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          Provedor Ativo: <span id="active-mode-label" class="text-emerald-400 font-semibold">MOCK</span>
+        </div>
+      </div>
+
+      <form id="search-form" onsubmit="handleSearch(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+        <!-- Estado UF -->
+        <div class="lg:col-span-1">
+          <label class="block text-xs font-medium text-slate-400 mb-1">Estado (UF)</label>
+          <select id="filter-uf" onchange="onUfChanged(this.value)" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 transition font-medium">
+            <option value="GO" selected>GO - Goiás</option>
+            <option value="DF">DF - Distrito Federal</option>
+            <option value="SP">SP - São Paulo</option>
+            <option value="MG">MG - Minas Gerais</option>
+            <option value="RJ">RJ - Rio de Janeiro</option>
+            <option value="PR">PR - Paraná</option>
+            <option value="BA">BA - Bahia</option>
+          </select>
+        </div>
+
+        <!-- Cidade (Select Sem Precisar Digitar) -->
+        <div class="lg:col-span-2">
+          <label class="block text-xs font-medium text-slate-400 mb-1 flex items-center justify-between">
+            <span>Cidade</span>
+            <span class="text-[10px] text-emerald-400">Selecione na lista</span>
+          </label>
+          <select id="filter-cidade" onchange="onCityChanged(this.value)" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 transition font-semibold text-emerald-400">
+            <!-- Populado dinamicamente -->
+            <option value="Goiânia" selected>Goiânia (Capital)</option>
+            <option value="Aparecida de Goiânia">Aparecida de Goiânia</option>
+            <option value="Anápolis">Anápolis</option>
+            <option value="Senador Canedo">Senador Canedo</option>
+            <option value="Trindade">Trindade</option>
+            <option value="Rio Verde">Rio Verde</option>
+            <option value="Itumbiara">Itumbiara</option>
+            <option value="Catalão">Catalão</option>
+          </select>
+        </div>
+
+        <!-- Setor / Bairro (Carregado com todos os setores de Goiânia e Aparecida) -->
+        <div class="lg:col-span-3">
+          <label class="block text-xs font-medium text-slate-400 mb-1 flex items-center justify-between">
+            <span>Setor / Bairro</span>
+            <span id="sectors-count-badge" class="text-[10px] text-slate-400 font-mono">60 setores disponíveis</span>
+          </label>
+          <select id="filter-bairro" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 transition">
+            <option value="TODOS">Todos os Setores (Cidade Inteira)</option>
+            <!-- Setores populados dinamicamente via API -->
+          </select>
+        </div>
+
+        <!-- Tipo de Comércio (Segmento Comercial Amigável) -->
+        <div class="lg:col-span-3">
+          <label class="block text-xs font-medium text-slate-400 mb-1 flex items-center justify-between">
+            <span>Tipo de Comércio (Segmento)</span>
+            <span class="text-[10px] text-slate-400">Ramo Principal</span>
+          </label>
+          <select id="filter-segmento" onchange="onSegmentChanged(this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 transition font-medium">
+            <!-- Populado via /api/segments -->
+          </select>
+        </div>
+
+        <!-- Atividade Específica (Nicho / Especialidade) -->
+        <div class="lg:col-span-3">
+          <label class="block text-xs font-medium text-slate-400 mb-1 flex items-center justify-between">
+            <span>Atividade Específica</span>
+            <span class="text-[10px] text-emerald-400 font-mono" id="current-cnae-indicator">CNAE 4744-0/01</span>
+          </label>
+          <select id="filter-atividade" onchange="onActivityChanged(this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 transition">
+            <!-- Populado dinamicamente com base no segmento -->
+          </select>
+        </div>
+
+        <!-- Porte da Empresa -->
+        <div class="lg:col-span-2">
+          <label class="block text-xs font-medium text-slate-400 mb-1">Porte da Empresa</label>
+          <select id="filter-porte" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 transition">
+            <option value="TODOS" selected>Todos os Portes</option>
+            <option value="MEI">MEI - Microempreendedor Individual</option>
+            <option value="ME">ME - Microempresa</option>
+            <option value="EPP">EPP - Empresa de Pequeno Porte</option>
+            <option value="DEMAIS">Demais Portes</option>
+          </select>
+        </div>
+
+        <!-- Quantidade de Leads -->
+        <div class="lg:col-span-1">
+          <label class="block text-xs font-medium text-slate-400 mb-1">Quantidade</label>
+          <select id="filter-limite" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 transition">
+            <option value="10">10 lojistas</option>
+            <option value="15" selected>15 lojistas</option>
+            <option value="20">20 lojistas</option>
+          </select>
+        </div>
+
+        <!-- Input Oculto / Auxiliar de CNAE -->
+        <input type="hidden" id="filter-cnae" value="4744-0/01">
+
+        <!-- Botões de Ação da Busca -->
+        <div class="lg:col-span-3 flex items-end gap-2">
+          <button type="submit" id="btn-search" class="flex-1 h-[38px] bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold text-sm flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-600/25">
+            <i data-lucide="radar" class="w-4 h-4"></i>
+            <span id="btn-search-text">Buscar & Enriquecer Lojistas</span>
+          </button>
+          <button type="button" onclick="resetFilters()" class="h-[38px] px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium flex items-center gap-1.5 transition border border-slate-700" title="Restaurar filtros padrão">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+            <span>Limpar</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Loading / Progress State -->
+      <div id="search-progress" class="hidden mt-4 pt-4 border-t border-slate-800">
+        <div class="flex items-center justify-between text-xs text-slate-400 mb-1.5">
+          <span id="progress-status-text" class="flex items-center gap-2">
+            <i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-emerald-400"></i>
+            Localizando comércios e enriquecendo dados de contato...
+          </span>
+          <span id="progress-percent" class="font-mono text-emerald-400">50%</span>
+        </div>
+        <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+          <div id="progress-bar-fill" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-2 rounded-full transition-all duration-300" style="width: 50%"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Visão CRM, Métricas e Roteirização -->
+    <section class="space-y-4">
+      <!-- Barra de Controle do CRM -->
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900 border border-slate-800 rounded-2xl p-4">
+        <!-- Visualizadores (Tabela vs Kanban) -->
+        <div class="flex items-center space-x-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <button onclick="setViewMode('table')" id="btn-view-table" class="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 bg-slate-800 text-white">
+            <i data-lucide="table" class="w-4 h-4"></i> Tabela Interativa
+          </button>
+          <button onclick="setViewMode('kanban')" id="btn-view-kanban" class="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 text-slate-400 hover:text-white">
+            <i data-lucide="kanban" class="w-4 h-4"></i> Funil Kanban
+          </button>
+        </div>
+
+        <!-- Roteirização, Ações e Limpeza de Busca -->
+        <div class="flex items-center gap-2">
+          <button onclick="clearSearchResults()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-red-950/60 text-slate-300 hover:text-red-400 text-xs font-medium flex items-center gap-1.5 transition border border-slate-700 hover:border-red-500/30" title="Apaga os leads capturados e limpa a tabela/CRM">
+            <i data-lucide="eraser" class="w-4 h-4"></i>
+            <span>Limpar Busca</span>
+          </button>
+          <button onclick="generatePresencialRoute()" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-2 transition shadow-lg shadow-indigo-600/20">
+            <i data-lucide="map-pin" class="w-4 h-4"></i>
+            <span>Gerar Rota Presencial</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Funil Métricas Rápidas -->
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3" id="kanban-metrics-bar">
+        <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between">
+          <div>
+            <p class="text-xs text-slate-400">Novos Leads</p>
+            <p class="text-xl font-bold text-sky-400" id="metric-novo-lead">0</p>
+          </div>
+          <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+        </div>
+        <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between">
+          <div>
+            <p class="text-xs text-slate-400">Primeiro Contato</p>
+            <p class="text-xl font-bold text-amber-400" id="metric-primeiro-contato">0</p>
+          </div>
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+        </div>
+        <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between">
+          <div>
+            <p class="text-xs text-slate-400">Em Negociação</p>
+            <p class="text-xl font-bold text-purple-400" id="metric-em-negociacao">0</p>
+          </div>
+          <span class="w-2.5 h-2.5 rounded-full bg-purple-400"></span>
+        </div>
+        <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between">
+          <div>
+            <p class="text-xs text-slate-400">Fechados</p>
+            <p class="text-xl font-bold text-emerald-400" id="metric-cliente-fechado">0</p>
+          </div>
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+        </div>
+        <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between">
+          <div>
+            <p class="text-xs text-slate-400">Descartados</p>
+            <p class="text-xl font-bold text-slate-500" id="metric-descartado">0</p>
+          </div>
+          <span class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+        </div>
+      </div>
+
+      <!-- VIEW 1: TABELA INTERATIVA -->
+      <div id="view-table" class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-300">
+            <thead class="bg-slate-950/80 text-xs uppercase font-medium text-slate-400 border-b border-slate-800">
+              <tr>
+                <th class="p-3 w-8"><input type="checkbox" id="select-all-leads" onchange="toggleSelectAll(this)" class="rounded bg-slate-800 border-slate-700 text-emerald-500"></th>
+                <th class="p-3">Loja / Comércio</th>
+                <th class="p-3">CNPJ / Porte</th>
+                <th class="p-3">Localização (Setor / Cidade)</th>
+                <th class="p-3">Avaliação</th>
+                <th class="p-3">Contato Rápido</th>
+                <th class="p-3">Status Funil</th>
+                <th class="p-3 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="leads-table-body" class="divide-y divide-slate-800/60 text-xs">
+              <!-- Renderizado via JS -->
+            </tbody>
+          </table>
+        </div>
+        <div id="table-empty-state" class="p-12 text-center text-slate-500 hidden">
+          <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 text-slate-600"></i>
+          <p class="text-base font-medium text-slate-300">Nenhum lead encontrado com os filtros atuais.</p>
+          <p class="text-xs text-slate-500 mt-1">Selecione uma cidade/setor e atividade no painel acima para prospectar.</p>
+        </div>
+      </div>
+
+      <!-- VIEW 2: KANBAN BOARD -->
+      <div id="view-kanban" class="hidden grid grid-cols-1 md:grid-cols-5 gap-4 overflow-x-auto pb-4">
+        <!-- Coluna 1: Novo Lead -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 flex flex-col min-w-[240px]">
+          <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
+            <span class="text-xs font-semibold text-sky-400 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-sky-400"></span> Novo Lead
+            </span>
+            <span id="count-kanban-NOVO_LEAD" class="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">0</span>
+          </div>
+          <div id="kanban-col-NOVO_LEAD" class="space-y-3 flex-1 overflow-y-auto max-h-[600px] pr-1"></div>
+        </div>
+
+        <!-- Coluna 2: Primeiro Contato -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 flex flex-col min-w-[240px]">
+          <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
+            <span class="text-xs font-semibold text-amber-400 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-amber-400"></span> Primeiro Contato
+            </span>
+            <span id="count-kanban-PRIMEIRO_CONTATO" class="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">0</span>
+          </div>
+          <div id="kanban-col-PRIMEIRO_CONTATO" class="space-y-3 flex-1 overflow-y-auto max-h-[600px] pr-1"></div>
+        </div>
+
+        <!-- Coluna 3: Em Negociação -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 flex flex-col min-w-[240px]">
+          <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
+            <span class="text-xs font-semibold text-purple-400 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-purple-400"></span> Em Negociação
+            </span>
+            <span id="count-kanban-EM_NEGOCIACAO" class="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">0</span>
+          </div>
+          <div id="kanban-col-EM_NEGOCIACAO" class="space-y-3 flex-1 overflow-y-auto max-h-[600px] pr-1"></div>
+        </div>
+
+        <!-- Coluna 4: Cliente Fechado -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 flex flex-col min-w-[240px]">
+          <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
+            <span class="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Cliente Fechado
+            </span>
+            <span id="count-kanban-CLIENTE_FECHADO" class="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">0</span>
+          </div>
+          <div id="kanban-col-CLIENTE_FECHADO" class="space-y-3 flex-1 overflow-y-auto max-h-[600px] pr-1"></div>
+        </div>
+
+        <!-- Coluna 5: Descartado -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 flex flex-col min-w-[240px]">
+          <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
+            <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-slate-500"></span> Descartado
+            </span>
+            <span id="count-kanban-DESCARTADO" class="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">0</span>
+          </div>
+          <div id="kanban-col-DESCARTADO" class="space-y-3 flex-1 overflow-y-auto max-h-[600px] pr-1"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL: Configurações & Troca de Modo -->
+  <div id="modal-config" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-5 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="sliders" class="w-5 h-5 text-emerald-400"></i>
+          Configurações do Sistema & APIs
+        </h3>
+        <button onclick="closeConfigModal()" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <div>
+          <label class="block font-medium text-slate-300 mb-1">Modo de Operação de Dados (DATA_MODE)</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" onclick="selectConfigMode('MOCK')" id="cfg-mode-mock" class="p-3 rounded-xl border border-slate-700 bg-slate-800 text-left hover:border-emerald-500 transition">
+              <p class="font-bold text-white text-xs">MOCK</p>
+              <p class="text-[10px] text-slate-400 mt-1">Offline / Faker pt_BR</p>
+            </button>
+            <button type="button" onclick="selectConfigMode('FREE')" id="cfg-mode-free" class="p-3 rounded-xl border border-slate-700 bg-slate-800 text-left hover:border-emerald-500 transition">
+              <p class="font-bold text-white text-xs">FREE</p>
+              <p class="text-[10px] text-slate-400 mt-1">BrasilAPI + OpenStreetMap</p>
+            </button>
+            <button type="button" onclick="selectConfigMode('PRODUCTION')" id="cfg-mode-prod" class="p-3 rounded-xl border border-slate-700 bg-slate-800 text-left hover:border-emerald-500 transition">
+              <p class="font-bold text-white text-xs">PRODUCTION</p>
+              <p class="text-[10px] text-slate-400 mt-1">Google Places API Oficial</p>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-300 mb-1">Google Places API Key (Modo PRODUCTION)</label>
+          <input type="password" id="cfg-google-key" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:border-emerald-500 focus:outline-none">
+          <p class="text-[10px] text-slate-500 mt-1">Necessário somente quando o modo PRODUCTION estiver ativo.</p>
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-300 mb-1">Template Padrão de Mensagem (WhatsApp)</label>
+          <textarea id="cfg-whatsapp-template" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:border-emerald-500 focus:outline-none" placeholder="Tags: {nome_fantasia}, {cidade}, {bairro}, {cnae}"></textarea>
+          <p class="text-[10px] text-slate-500 mt-1">Variáveis disponíveis: {nome_fantasia}, {cidade}, {bairro}, {cnae}</p>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 border-t border-slate-800 pt-4">
+        <button onclick="closeConfigModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300">Cancelar</button>
+        <button onclick="saveConfigurations()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white">Salvar Configurações</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Importador de CSV / JSON -->
+  <div id="modal-import" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="file-spreadsheet" class="w-5 h-5 text-emerald-400"></i>
+          Importar Leads (Dados Abertos / Casa dos Dados)
+        </h3>
+        <button onclick="closeImportModal()" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-400">Cole o conteúdo de um arquivo CSV ou JSON exportado da Receita Federal ou de portais públicos:</p>
+
+      <textarea id="import-content" rows="8" placeholder="CNPJ;Razão Social;Nome Fantasia;CNAE;Endereço;Bairro;Cidade;UF;Telefone" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 font-mono focus:border-emerald-500 focus:outline-none"></textarea>
+
+      <div class="flex items-center justify-between border-t border-slate-800 pt-3">
+        <span class="text-[11px] text-slate-500">Delimitadores suportados: vírgula ou ponto-e-vírgula</span>
+        <button onclick="submitImport()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white flex items-center gap-1.5">
+          <i data-lucide="check" class="w-4 h-4"></i> Processar Importação
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Anotações Rápidas -->
+  <div id="modal-notes" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="pencil" class="w-4 h-4 text-emerald-400"></i>
+          <span id="modal-notes-title">Anotações do Lojista</span>
+        </h3>
+        <button onclick="closeNotesModal()" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <input type="hidden" id="modal-notes-lead-id">
+      <textarea id="modal-notes-text" rows="4" placeholder="Ex: Falar com o gerente João às terças-feiras no período da manhã..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none"></textarea>
+
+      <div class="flex justify-end gap-2">
+        <button onclick="closeNotesModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-slate-300">Fechar</button>
+        <button onclick="saveLeadNotes()" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white">Salvar Anotação</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
