@@ -52,9 +52,12 @@ export class GooglePlacesAdapter implements LeadProvider {
       );
     }
 
+    const cleanSector = filter.bairro && filter.bairro !== 'TODOS'
+      ? filter.bairro.replace(/\s*\([^)]*\)/g, '').trim()
+      : '';
+    const cleanCity = filter.cidade.replace(/\s*\([^)]*\)/g, '').trim();
     const activity = filter.termo_atividade || filter.atividade || filter.cnae || 'comércio';
-    const sector = filter.bairro && filter.bairro !== 'TODOS' ? filter.bairro : '';
-    const query = `${activity} ${sector} ${filter.cidade} ${filter.uf}`.trim();
+    const query = `${activity} ${cleanSector} ${cleanCity} ${filter.uf}`.replace(/\s+/g, ' ').trim();
 
     const hash = createHash('md5').update(`gplaces_v1:${query}:${filter.limite || 15}`).digest('hex');
     const cached = this.getCache(hash);

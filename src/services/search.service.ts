@@ -112,7 +112,7 @@ export class SearchService {
       termoBusca,
       JSON.stringify(filter),
       leads.length,
-      'FREE'
+      activeMode
     );
 
     return {
