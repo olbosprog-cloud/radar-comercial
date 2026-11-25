@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: radar-comercial-b2b
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: DATA_MODE
+        value: PRODUCTION
+      - key: HOST
+        value: 0.0.0.0
+      - key: GOOGLE_PLACES_API_KEY
+        sync: false
