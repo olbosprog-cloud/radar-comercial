@@ -55,6 +55,7 @@ export class GooglePlacesAdapter implements LeadProvider {
     const cleanSector = filter.bairro && filter.bairro !== 'TODOS'
       ? filter.bairro.replace(/\s*\([^)]*\)/g, '').trim()
       : '';
+    const sector = cleanSector;
     const cleanCity = filter.cidade.replace(/\s*\([^)]*\)/g, '').trim();
     const activity = filter.termo_atividade || filter.atividade || filter.cnae || 'comércio';
     const query = `${activity} ${cleanSector} ${cleanCity} ${filter.uf}`.replace(/\s+/g, ' ').trim();
