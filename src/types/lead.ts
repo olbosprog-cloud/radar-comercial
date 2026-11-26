@@ -41,6 +41,8 @@ export interface NormalizedLead {
   total_reviews?: number;      // Número de reviews
   latitude?: number;
   longitude?: number;
+  distancia_metros?: number;
+  distancia_formatada?: string;
   
   // Mini-CRM
   status: LeadStatus;
@@ -64,6 +66,9 @@ export interface SearchFilter {
   data_abertura_inicio?: string;
   data_abertura_fim?: string;
   limite?: number;
+  latitude?: number;
+  longitude?: number;
+  raio_km?: number;
 }
 
 export interface SearchHistoryRecord {

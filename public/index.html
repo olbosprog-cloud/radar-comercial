@@ -101,6 +101,34 @@
         </div>
       </div>
 
+      <!-- Barra de Localização Atual / Busca ao Redor (GPS) -->
+      <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-950/80 border border-slate-800 rounded-xl p-3 mb-4">
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button type="button" id="btn-gps-toggle" onclick="toggleGpsLocation()" class="px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition border border-emerald-500/40 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60 shadow">
+            <i data-lucide="crosshair" class="w-4 h-4 text-emerald-400"></i>
+            <span id="gps-btn-label">Buscar ao Redor da Minha Localização (GPS)</span>
+          </button>
+          <span id="gps-status-badge" class="hidden text-xs font-medium px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="gps-coords-text">GPS Ativo</span>
+            <button type="button" onclick="disableGpsLocation()" class="ml-1 text-slate-400 hover:text-rose-400" title="Desativar GPS">✕</button>
+          </span>
+        </div>
+
+        <div id="gps-radius-container" class="hidden flex items-center gap-2 text-xs text-slate-300">
+          <span class="text-slate-400 text-xs flex items-center gap-1">
+            <i data-lucide="radar" class="w-3.5 h-3.5 text-emerald-400"></i> Raio:
+          </span>
+          <div class="inline-flex rounded-lg bg-slate-900 p-0.5 border border-slate-800">
+            <button type="button" onclick="selectRadius(1)" id="btn-radius-1" class="px-2.5 py-1 rounded text-xs font-medium transition text-slate-400 hover:text-white">1 km</button>
+            <button type="button" onclick="selectRadius(2)" id="btn-radius-2" class="px-2.5 py-1 rounded text-xs font-medium transition text-slate-400 hover:text-white">2 km</button>
+            <button type="button" onclick="selectRadius(3)" id="btn-radius-3" class="px-2.5 py-1 rounded text-xs font-bold bg-emerald-600 text-white shadow">3 km</button>
+            <button type="button" onclick="selectRadius(5)" id="btn-radius-5" class="px-2.5 py-1 rounded text-xs font-medium transition text-slate-400 hover:text-white">5 km</button>
+            <button type="button" onclick="selectRadius(10)" id="btn-radius-10" class="px-2.5 py-1 rounded text-xs font-medium transition text-slate-400 hover:text-white">10 km</button>
+          </div>
+        </div>
+      </div>
+
       <form id="search-form" onsubmit="handleSearch(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
         <!-- Estado UF -->
         <div class="lg:col-span-1">

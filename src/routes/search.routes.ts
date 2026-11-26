@@ -24,21 +24,26 @@ export async function searchRoutes(app: FastifyInstance) {
       data_abertura_inicio,
       data_abertura_fim,
       limite,
+      latitude,
+      longitude,
+      raio_km,
       auto_enrich = true,
       override_mode,
     } = req.body || {};
 
-    if (!cidade || !uf) {
+    // Se tiver coordenadas de GPS ou cidade/uf
+    const hasGps = latitude !== undefined && longitude !== undefined;
+    if (!hasGps && (!cidade || !uf)) {
       return reply.status(400).send({
         success: false,
-        error: 'Cidade e UF são campos obrigatórios para realizar a busca.',
+        error: 'Cidade e UF (ou localização GPS) são obrigatórios para realizar a busca.',
       });
     }
 
     try {
       const filter: SearchFilter = {
-        uf: uf.trim().toUpperCase(),
-        cidade: cidade.trim(),
+        uf: uf ? uf.trim().toUpperCase() : 'GO',
+        cidade: cidade ? cidade.trim() : 'Localização Atual',
         bairro: bairro && bairro !== 'TODOS' ? bairro.trim() : undefined,
         cnae: cnae ? cnae.trim() : undefined,
         segmento: segmento ? segmento.trim() : undefined,
@@ -47,7 +52,10 @@ export async function searchRoutes(app: FastifyInstance) {
         porte: porte || 'TODOS',
         data_abertura_inicio,
         data_abertura_fim,
-        limite: limite ? Number(limite) : 15,
+        limite: limite ? Number(limite) : 20,
+        latitude: latitude ? Number(latitude) : undefined,
+        longitude: longitude ? Number(longitude) : undefined,
+        raio_km: raio_km ? Number(raio_km) : 3,
       };
 
       const result = await SearchService.executeSearch(filter, auto_enrich, override_mode);

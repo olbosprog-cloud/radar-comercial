@@ -4,6 +4,19 @@ import { NormalizedLead, SearchFilter } from '../types/lead.js';
 import { db } from '../database/db.js';
 import { createHash, randomUUID } from 'crypto';
 
+function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371e3;
+  const rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad;
+  const dLon = (lon2 - lon1) * rad;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * rad) * Math.cos(lat2 * rad) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
+
 export class GooglePlacesAdapter implements LeadProvider {
   private apiKey: string;
 
@@ -52,29 +65,49 @@ export class GooglePlacesAdapter implements LeadProvider {
       );
     }
 
+    const hasGps = filter.latitude !== undefined && filter.longitude !== undefined;
     const cleanSector = filter.bairro && filter.bairro !== 'TODOS'
       ? filter.bairro.replace(/\s*\([^)]*\)/g, '').trim()
       : '';
     const sector = cleanSector;
     const cleanCity = filter.cidade.replace(/\s*\([^)]*\)/g, '').trim();
     const activity = filter.termo_atividade || filter.atividade || filter.cnae || 'comércio';
-    const query = `${activity} ${cleanSector} ${cleanCity} ${filter.uf}`.replace(/\s+/g, ' ').trim();
+    
+    // Se tiver GPS e nenhuma cidade específica foi digitada, foca na atividade diretamente
+    const query = hasGps && cleanCity === 'Localização Atual'
+      ? `${activity}`.trim()
+      : `${activity} ${cleanSector} ${cleanCity} ${filter.uf}`.replace(/\s+/g, ' ').trim();
 
-    const hash = createHash('md5').update(`gplaces_v1:${query}:${filter.limite || 15}`).digest('hex');
+    const hash = createHash('md5').update(`gplaces_v1:${query}:${filter.latitude || 0}:${filter.longitude || 0}:${filter.raio_km || 3}:${filter.limite || 15}`).digest('hex');
     const cached = this.getCache(hash);
     if (cached) return cached;
 
     // 1. Tentativa com a Nova Google Places API (Places API New - recomendada e ativada pelo usuário)
     try {
-      console.log(`[GooglePlacesAdapter] Consultando Places API (New) para: "${query}"`);
+      console.log(`[GooglePlacesAdapter] Consultando Places API (New) para: "${query}" (GPS: ${hasGps ? `${filter.latitude}, ${filter.longitude} raio ${filter.raio_km || 3}km` : 'Não'})`);
       const newApiUrl = 'https://places.googleapis.com/v1/places:searchText';
+      
+      const requestPayload: any = {
+        textQuery: query,
+        languageCode: 'pt-BR',
+        maxResultCount: filter.limite && filter.limite <= 20 ? filter.limite : 20,
+      };
+
+      if (hasGps) {
+        requestPayload.locationBias = {
+          circle: {
+            center: {
+              latitude: filter.latitude,
+              longitude: filter.longitude,
+            },
+            radius: (filter.raio_km || 3) * 1000.0,
+          },
+        };
+      }
+
       const response = await axios.post(
         newApiUrl,
-        {
-          textQuery: query,
-          languageCode: 'pt-BR',
-          maxResultCount: filter.limite && filter.limite <= 20 ? filter.limite : 15,
-        },
+        requestPayload,
         {
           headers: {
             'Content-Type': 'application/json',
@@ -106,6 +139,19 @@ export class GooglePlacesAdapter implements LeadProvider {
         const street = addressParts[0] || 'Avenida Comercial';
         const numPart = addressParts[1] ? addressParts[1].trim().split(' ')[0] : 'S/N';
 
+        let distanciaMetros: number | undefined = undefined;
+        let distanciaFormatada: string | undefined = undefined;
+
+        if (hasGps && place.location?.latitude && place.location?.longitude) {
+          distanciaMetros = calculateDistanceMeters(
+            filter.latitude!,
+            filter.longitude!,
+            place.location.latitude,
+            place.location.longitude
+          );
+          distanciaFormatada = distanciaMetros < 1000 ? `${distanciaMetros}m` : `${(distanciaMetros / 1000).toFixed(1)}km`;
+        }
+
         const lead: NormalizedLead = {
           id: randomUUID(),
           cnpj: `GPLACES-${place.id.substring(0, 10)}`,
@@ -130,14 +176,24 @@ export class GooglePlacesAdapter implements LeadProvider {
           total_reviews: place.userRatingCount || 0,
           latitude: place.location?.latitude,
           longitude: place.location?.longitude,
+          distancia_metros: distanciaMetros,
+          distancia_formatada: distanciaFormatada,
           status: 'NOVO_LEAD',
-          anotacoes: `Localizado em tempo real no Google Maps (${place.formattedAddress || ''}).`,
-          tags: 'Google Maps Real, Loja Física Verificada',
+          anotacoes: distanciaFormatada
+            ? `📍 A ${distanciaFormatada} de você (${place.formattedAddress || ''})`
+            : `Localizado em tempo real no Google Maps (${place.formattedAddress || ''}).`,
+          tags: distanciaFormatada
+            ? `Ao Meu Redor (${distanciaFormatada}), Google Maps Real`
+            : 'Google Maps Real, Loja Física Verificada',
           origem_fonte: 'GOOGLE_PLACES',
           criado_em: new Date().toISOString(),
         };
 
         leads.push(lead);
+      }
+
+      if (hasGps) {
+        leads.sort((a, b) => (a.distancia_metros || 999999) - (b.distancia_metros || 999999));
       }
 
       if (leads.length > 0) {

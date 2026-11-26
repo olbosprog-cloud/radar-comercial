@@ -6,6 +6,12 @@ let selectedLeadIds = new Set();
 let cachedSegments = [];
 let cachedCities = [];
 
+// Localização GPS do Usuário
+let isGpsActive = false;
+let userLatitude = null;
+let userLongitude = null;
+let selectedRadiusKm = 3;
+
 document.addEventListener('DOMContentLoaded', async () => {
   if (window.lucide) window.lucide.createIcons();
   await loadConfig();
@@ -251,6 +257,97 @@ async function saveConfigurations() {
 }
 
 // -------------------------------------------------------------
+// LOCALIZAÇÃO GPS E BUSCA AO REDOR
+// -------------------------------------------------------------
+function toggleGpsLocation() {
+  if (isGpsActive) {
+    disableGpsLocation();
+    return;
+  }
+
+  if (!navigator.geolocation) {
+    alert('Geolocalização não é suportada por este navegador/dispositivo.');
+    return;
+  }
+
+  const btnLabel = document.getElementById('gps-btn-label');
+  const btnToggle = document.getElementById('btn-gps-toggle');
+  btnLabel.textContent = 'Obtendo localização GPS...';
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      userLatitude = position.coords.latitude;
+      userLongitude = position.coords.longitude;
+      isGpsActive = true;
+
+      btnToggle.className = 'px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition border border-emerald-500 bg-emerald-600 text-white shadow-md';
+      btnLabel.textContent = '📍 Localização GPS Ativa';
+
+      const badge = document.getElementById('gps-status-badge');
+      const coordsText = document.getElementById('gps-coords-text');
+      const radiusContainer = document.getElementById('gps-radius-container');
+
+      if (badge) badge.classList.remove('hidden');
+      if (radiusContainer) radiusContainer.classList.remove('hidden');
+      if (coordsText) coordsText.textContent = `Raio de ${selectedRadiusKm}km`;
+
+      const searchBtnText = document.getElementById('btn-search-text');
+      if (searchBtnText) searchBtnText.textContent = `Buscar Comércios a ${selectedRadiusKm}km de Mim`;
+
+      refreshIcons();
+    },
+    (err) => {
+      console.warn('Erro ao obter GPS:', err);
+      btnLabel.textContent = 'Buscar ao Redor da Minha Localização (GPS)';
+      alert('Não foi possível obter sua localização. Permita o acesso ao GPS no navegador do celular ou computador.');
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+  );
+}
+
+function disableGpsLocation() {
+  isGpsActive = false;
+  userLatitude = null;
+  userLongitude = null;
+
+  const btnToggle = document.getElementById('btn-gps-toggle');
+  const btnLabel = document.getElementById('gps-btn-label');
+  const badge = document.getElementById('gps-status-badge');
+  const radiusContainer = document.getElementById('gps-radius-container');
+
+  if (btnToggle) {
+    btnToggle.className = 'px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition border border-emerald-500/40 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60 shadow';
+  }
+  if (btnLabel) btnLabel.textContent = 'Buscar ao Redor da Minha Localização (GPS)';
+  if (badge) badge.classList.add('hidden');
+  if (radiusContainer) radiusContainer.classList.add('hidden');
+
+  const searchBtnText = document.getElementById('btn-search-text');
+  if (searchBtnText) searchBtnText.textContent = 'Buscar & Enriquecer Lojistas';
+  refreshIcons();
+}
+
+function selectRadius(km) {
+  selectedRadiusKm = km;
+  [1, 2, 3, 5, 10].forEach((r) => {
+    const btn = document.getElementById(`btn-radius-${r}`);
+    if (btn) {
+      if (r === km) {
+        btn.className = 'px-2.5 py-1 rounded text-xs font-bold bg-emerald-600 text-white shadow';
+      } else {
+        btn.className = 'px-2.5 py-1 rounded text-xs font-medium transition text-slate-400 hover:text-white';
+      }
+    }
+  });
+
+  const coordsText = document.getElementById('gps-coords-text');
+  if (coordsText) coordsText.textContent = `Raio de ${selectedRadiusKm}km`;
+
+  const searchBtnText = document.getElementById('btn-search-text');
+  if (searchBtnText) searchBtnText.textContent = `Buscar Comércios a ${selectedRadiusKm}km de Mim`;
+}
+
+// -------------------------------------------------------------
 // BUSCA E ENRIQUECIMENTO DE LEADS
 // -------------------------------------------------------------
 async function handleSearch(event) {
@@ -279,7 +376,9 @@ async function handleSearch(event) {
 
   barFill.style.width = '30%';
   barPercent.textContent = '30%';
-  statusText.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-emerald-400"></i> Buscando ${atividade} em ${cidade} (${bairro === 'TODOS' ? 'Geral' : bairro})...`;
+  statusText.innerHTML = isGpsActive
+    ? `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-emerald-400"></i> Buscando ${atividade || 'comércios'} ao seu redor (raio ${selectedRadiusKm}km)...`
+    : `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-emerald-400"></i> Buscando ${atividade} em ${cidade} (${bairro === 'TODOS' ? 'Geral' : bairro})...`;
   refreshIcons();
 
   const timer1 = setTimeout(() => {
@@ -290,21 +389,29 @@ async function handleSearch(event) {
   }, 400);
 
   try {
+    const payload = {
+      uf,
+      cidade: isGpsActive ? 'Localização Atual' : cidade,
+      bairro: isGpsActive ? undefined : bairro,
+      cnae,
+      segmento,
+      atividade,
+      termo_atividade: atividade,
+      porte,
+      limite,
+      auto_enrich: true,
+    };
+
+    if (isGpsActive && userLatitude && userLongitude) {
+      payload.latitude = userLatitude;
+      payload.longitude = userLongitude;
+      payload.raio_km = selectedRadiusKm;
+    }
+
     const res = await fetch('/api/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        uf,
-        cidade,
-        bairro,
-        cnae,
-        segmento,
-        atividade,
-        termo_atividade: atividade,
-        porte,
-        limite,
-        auto_enrich: true,
-      }),
+      body: JSON.stringify(payload),
     });
 
     const json = await res.json();
@@ -419,8 +526,9 @@ function renderTable(leads) {
           <input type="checkbox" onchange="toggleSelectLead('${lead.id}', this)" ${isChecked} class="rounded bg-slate-800 border-slate-700 text-emerald-500">
         </td>
         <td class="p-3">
-          <div class="font-bold text-slate-100 flex items-center gap-1.5">
-            ${lead.nome_fantasia || lead.razao_social}
+          <div class="font-bold text-slate-100 flex items-center gap-1.5 flex-wrap">
+            <span>${lead.nome_fantasia || lead.razao_social}</span>
+            ${lead.distancia_formatada ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-500/20 text-sky-400 border border-sky-500/30" title="Distância estimada">📍 ${lead.distancia_formatada}</span>` : ''}
             ${lead.origem_fonte === 'BRASIL_API' ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" title="Comércio Real Oficial">Loja Real ✅</span>' : ''}
             ${lead.site_url ? `<a href="${lead.site_url}" target="_blank" class="text-slate-500 hover:text-emerald-400" title="Acessar site"><i data-lucide="globe" class="w-3 h-3"></i></a>` : ''}
           </div>
@@ -433,7 +541,10 @@ function renderTable(leads) {
         </td>
         <td class="p-3">
           <div class="text-slate-100 font-medium">${lead.bairro || 'Setor Central'}</div>
-          <div class="text-[11px] text-slate-400">${lead.municipio} - ${lead.uf} ${lead.logradouro ? `• ${lead.logradouro}` : ''}</div>
+          <div class="text-[11px] text-slate-400 flex items-center gap-1.5 flex-wrap">
+            <span>${lead.municipio} - ${lead.uf} ${lead.logradouro ? `• ${lead.logradouro}` : ''}</span>
+            ${lead.latitude && lead.longitude ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${lead.latitude},${lead.longitude}" target="_blank" class="inline-flex items-center gap-1 text-[10px] text-emerald-400 hover:text-emerald-300 font-medium" title="Abrir rota no Google Maps"><i data-lucide="navigation" class="w-3 h-3"></i> Rota</a>` : ''}
+          </div>
         </td>
         <td class="p-3">
           <div class="text-amber-400 text-xs font-semibold">${stars}</div>
@@ -498,7 +609,10 @@ function renderKanban() {
     card.innerHTML = `
       <div class="flex items-start justify-between gap-1">
         <h4 class="font-bold text-white text-xs leading-tight">${lead.nome_fantasia || lead.razao_social}</h4>
-        <span class="text-[10px] font-mono px-1 rounded bg-slate-800 text-slate-400">${lead.porte}</span>
+        <div class="flex items-center gap-1 flex-shrink-0">
+          ${lead.distancia_formatada ? `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30">📍 ${lead.distancia_formatada}</span>` : ''}
+          <span class="text-[10px] font-mono px-1 rounded bg-slate-800 text-slate-400">${lead.porte}</span>
+        </div>
       </div>
       <p class="text-[11px] text-slate-400">${lead.bairro || 'Centro'}, ${lead.municipio}</p>
       ${lead.rating ? `<div class="text-[10px] text-amber-400 font-medium">⭐ ${lead.rating.toFixed(1)} (${lead.total_reviews || 0} reviews)</div>` : ''}

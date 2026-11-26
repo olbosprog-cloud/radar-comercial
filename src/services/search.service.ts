@@ -103,7 +103,11 @@ export class SearchService {
     }
 
     // 6. Registra histórico da busca
-    const termoBusca = `${filter.termo_atividade || filter.cnae || 'Geral'} em ${filter.cidade}/${filter.uf}${filter.bairro && filter.bairro !== 'TODOS' ? ` (${filter.bairro})` : ''}`;
+    const hasGps = filter.latitude !== undefined && filter.longitude !== undefined;
+    const termoBusca = hasGps
+      ? `Ao redor da minha localização (raio ${filter.raio_km || 3}km): ${filter.termo_atividade || filter.atividade || 'Comércios'}`
+      : `${filter.termo_atividade || filter.cnae || 'Geral'} em ${filter.cidade}/${filter.uf}${filter.bairro && filter.bairro !== 'TODOS' ? ` (${filter.bairro})` : ''}`;
+    
     db.prepare(`
       INSERT INTO buscas_realizadas (id, termo_busca, filtros_json, total_encontrados, modo_utilizado, data_busca)
       VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'))
