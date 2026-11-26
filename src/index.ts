@@ -4,7 +4,9 @@ import fastifyStatic from '@fastify/static';
 import path from 'path';
 import fs from 'fs';
 import { ENV } from './config/env.js';
-import { initDatabase } from './database/db.js';
+import { db, initDatabase } from './database/db.js';
+import { LeadService } from './services/lead.service.js';
+import { REAL_STORES_GOIAS } from './data/real-stores-goias.js';
 import { configRoutes } from './routes/config.routes.js';
 import { searchRoutes } from './routes/search.routes.js';
 import { leadsRoutes } from './routes/leads.routes.js';
@@ -29,6 +31,17 @@ async function bootstrap() {
   initDatabase();
   console.log('📦 Banco de Dados SQLite inicializado com sucesso!');
   console.log(`⚡ Modo de Dados Ativo: [${ProviderFactory.getActiveMode()}]`);
+
+  // Carrega automaticamente a base de lojas reais verificadas se o banco estiver vazio
+  try {
+    const leadsCountRow = db.prepare('SELECT count(*) as count FROM leads').get() as { count: number };
+    if (leadsCountRow.count === 0) {
+      LeadService.saveBatch(REAL_STORES_GOIAS);
+      console.log(`✨ Populado automaticamente com ${REAL_STORES_GOIAS.length} lojas reais verificadas!`);
+    }
+  } catch (seedErr) {
+    console.warn('Aviso ao popular lojas iniciais:', seedErr);
+  }
 
   // 3. Registro de Rotas da API
   await app.register(configRoutes);
