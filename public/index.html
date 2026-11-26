@@ -2,7 +2,10 @@
 <html lang="pt-BR" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <meta name="theme-color" content="#020617">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Radar Comercial B2B - Prospecção e CRM para Lojistas</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -40,24 +43,24 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
 
-  <!-- Topbar -->
-  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50 px-6 py-3 flex items-center justify-between">
-    <div class="flex items-center space-x-3">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-        <i data-lucide="crosshair" class="w-6 h-6 text-white"></i>
+  <!-- Topbar Responsiva Mobile & Desktop -->
+  <header class="border-b border-slate-800 bg-slate-900/95 backdrop-blur sticky top-0 z-50 px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between">
+    <div class="flex items-center space-x-2.5 sm:space-x-3">
+      <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20 flex-shrink-0">
+        <i data-lucide="crosshair" class="w-5 h-5 sm:w-6 sm:h-6 text-white"></i>
       </div>
       <div>
-        <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-          Radar Comercial B2B
-          <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Goiânia & Região</span>
+        <h1 class="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-1.5 sm:gap-2">
+          <span>Radar B2B</span>
+          <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Goiás</span>
         </h1>
-        <p class="text-xs text-slate-400">Prospecção de Lojistas & Comércio Físico com Enriquecimento</p>
+        <p class="hidden sm:block text-xs text-slate-400">Prospecção de Lojistas com Enriquecimento</p>
       </div>
     </div>
 
     <!-- Active Mode & Actions -->
-    <div class="flex items-center space-x-3">
-      <div class="flex items-center bg-slate-800/80 rounded-lg p-1 border border-slate-700 text-xs">
+    <div class="flex items-center space-x-1.5 sm:space-x-3">
+      <div class="hidden md:flex items-center bg-slate-800/80 rounded-lg p-1 border border-slate-700 text-xs">
         <span class="text-slate-400 px-2 flex items-center gap-1">
           <i data-lucide="cpu" class="w-3.5 h-3.5"></i> Modo:
         </span>
@@ -70,18 +73,18 @@
         <i data-lucide="settings" class="w-4 h-4"></i>
       </button>
 
-      <button onclick="openImportModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 flex items-center gap-1.5 transition">
-        <i data-lucide="upload" class="w-4 h-4"></i> Importar CSV
+      <button onclick="openImportModal()" class="hidden sm:flex px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 items-center gap-1.5 transition">
+        <i data-lucide="upload" class="w-4 h-4"></i> <span class="hidden md:inline">Importar CSV</span>
       </button>
 
-      <a href="/api/leads/export" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white flex items-center gap-1.5 transition shadow-lg shadow-emerald-600/20">
-        <i data-lucide="download" class="w-4 h-4"></i> Exportar Leads
+      <a href="/api/leads/export" class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white flex items-center gap-1.5 transition shadow-lg shadow-emerald-600/20" title="Exportar Leads">
+        <i data-lucide="download" class="w-4 h-4"></i> <span class="hidden sm:inline">Exportar</span>
       </a>
     </div>
   </header>
 
   <!-- Main Container -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+  <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
 
     <!-- Section 1: Painel de Busca e Filtros Comerciais -->
     <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl relative overflow-hidden">
@@ -316,36 +319,45 @@
         </div>
       </div>
 
-      <!-- VIEW 1: TABELA INTERATIVA -->
-      <div id="view-table" class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-sm text-slate-300">
-            <thead class="bg-slate-950/80 text-xs uppercase font-medium text-slate-400 border-b border-slate-800">
-              <tr>
-                <th class="p-3 w-8"><input type="checkbox" id="select-all-leads" onchange="toggleSelectAll(this)" class="rounded bg-slate-800 border-slate-700 text-emerald-500"></th>
-                <th class="p-3">Loja / Comércio</th>
-                <th class="p-3">CNPJ / Porte</th>
-                <th class="p-3">Localização (Setor / Cidade)</th>
-                <th class="p-3">Avaliação</th>
-                <th class="p-3">Contato Rápido</th>
-                <th class="p-3">Status Funil</th>
-                <th class="p-3 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody id="leads-table-body" class="divide-y divide-slate-800/60 text-xs">
-              <!-- Renderizado via JS -->
-            </tbody>
-          </table>
+      <!-- VIEW 1: TABELA (DESKTOP) E CARDS TOUCH (MOBILE) -->
+      <div id="view-table" class="space-y-3">
+        <!-- Lista de Cards Otimizada para Celular (Visível no Celular / Mobile) -->
+        <div id="leads-mobile-list" class="block md:hidden space-y-3">
+          <!-- Populado via renderMobileCards(leads) no JS -->
         </div>
-        <div id="table-empty-state" class="p-12 text-center text-slate-500 hidden">
-          <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 text-slate-600"></i>
-          <p class="text-base font-medium text-slate-300">Nenhum lead encontrado com os filtros atuais.</p>
-          <p class="text-xs text-slate-500 mt-1">Selecione uma cidade/setor e atividade no painel acima para prospectar.</p>
+
+        <!-- Tabela Tradicional para Computador e Telas Maiores (>= 768px) -->
+        <div class="hidden md:block bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+              <thead class="bg-slate-950/80 text-xs uppercase font-medium text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="p-3 w-8"><input type="checkbox" id="select-all-leads" onchange="toggleSelectAll(this)" class="rounded bg-slate-800 border-slate-700 text-emerald-500"></th>
+                  <th class="p-3">Loja / Comércio</th>
+                  <th class="p-3">CNPJ / Porte</th>
+                  <th class="p-3">Localização (Setor / Cidade)</th>
+                  <th class="p-3">Avaliação</th>
+                  <th class="p-3">Contato Rápido</th>
+                  <th class="p-3">Status Funil</th>
+                  <th class="p-3 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="leads-table-body" class="divide-y divide-slate-800/60 text-xs">
+                <!-- Renderizado via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="table-empty-state" class="bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-12 text-center text-slate-500 hidden">
+          <i data-lucide="inbox" class="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-slate-600"></i>
+          <p class="text-sm sm:text-base font-medium text-slate-300">Nenhum lead encontrado com os filtros atuais.</p>
+          <p class="text-xs text-slate-500 mt-1">Selecione uma cidade/setor ou use a busca GPS para prospectar.</p>
         </div>
       </div>
 
-      <!-- VIEW 2: KANBAN BOARD -->
-      <div id="view-kanban" class="hidden grid grid-cols-1 md:grid-cols-5 gap-4 overflow-x-auto pb-4">
+      <!-- VIEW 2: KANBAN BOARD (Deslizar Suave com Dedo no Celular) -->
+      <div id="view-kanban" class="hidden flex md:grid md:grid-cols-5 gap-3 sm:gap-4 overflow-x-auto pb-4 snap-x">
         <!-- Coluna 1: Novo Lead -->
         <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 flex flex-col min-w-[240px]">
           <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">

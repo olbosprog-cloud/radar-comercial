@@ -507,84 +507,204 @@ async function loadKanbanMetrics() {
 function renderTable(leads) {
   const tbody = document.getElementById('leads-table-body');
   const emptyState = document.getElementById('table-empty-state');
+  const mobileContainer = document.getElementById('leads-mobile-list');
 
   if (!leads || leads.length === 0) {
-    tbody.innerHTML = '';
-    emptyState.classList.remove('hidden');
+    if (tbody) tbody.innerHTML = '';
+    if (mobileContainer) mobileContainer.innerHTML = '';
+    if (emptyState) emptyState.classList.remove('hidden');
     return;
   }
-  emptyState.classList.add('hidden');
+  if (emptyState) emptyState.classList.add('hidden');
 
-  tbody.innerHTML = leads
+  // Renderiza cards touch nativos para celular
+  renderMobileCards(leads);
+
+  if (tbody) {
+    tbody.innerHTML = leads
+      .map((lead) => {
+        const stars = lead.rating ? `⭐ ${lead.rating.toFixed(1)} (${lead.total_reviews || 0})` : 'Sem reviews';
+        const isChecked = selectedLeadIds.has(lead.id) ? 'checked' : '';
+
+        return `
+        <tr class="hover:bg-slate-800/40 transition">
+          <td class="p-3">
+            <input type="checkbox" onchange="toggleSelectLead('${lead.id}', this)" ${isChecked} class="rounded bg-slate-800 border-slate-700 text-emerald-500">
+          </td>
+          <td class="p-3">
+            <div class="font-bold text-slate-100 flex items-center gap-1.5 flex-wrap">
+              <span>${lead.nome_fantasia || lead.razao_social}</span>
+              ${lead.distancia_formatada ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-500/20 text-sky-400 border border-sky-500/30" title="Distância estimada">📍 ${lead.distancia_formatada}</span>` : ''}
+              ${lead.origem_fonte === 'BRASIL_API' ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" title="Comércio Real Oficial">Loja Real ✅</span>' : ''}
+              ${lead.site_url ? `<a href="${lead.site_url}" target="_blank" class="text-slate-500 hover:text-emerald-400" title="Acessar site"><i data-lucide="globe" class="w-3 h-3"></i></a>` : ''}
+            </div>
+            <div class="text-[11px] text-slate-400 truncate max-w-xs">${lead.razao_social}</div>
+            ${lead.anotacoes ? `<div class="text-[10px] text-amber-300/90 mt-0.5 flex items-center gap-1"><i data-lucide="tag" class="w-2.5 h-2.5"></i> ${lead.anotacoes}</div>` : ''}
+          </td>
+          <td class="p-3">
+            <div class="font-mono text-slate-300 text-[11px]">${lead.cnpj}</div>
+            <span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">${lead.porte}</span>
+          </td>
+          <td class="p-3">
+            <div class="text-slate-100 font-medium">${lead.bairro || 'Setor Central'}</div>
+            <div class="text-[11px] text-slate-400 flex items-center gap-1.5 flex-wrap">
+              <span>${lead.municipio} - ${lead.uf} ${lead.logradouro ? `• ${lead.logradouro}` : ''}</span>
+              ${lead.latitude && lead.longitude ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${lead.latitude},${lead.longitude}" target="_blank" class="inline-flex items-center gap-1 text-[10px] text-emerald-400 hover:text-emerald-300 font-medium" title="Abrir rota no Google Maps"><i data-lucide="navigation" class="w-3 h-3"></i> Rota</a>` : ''}
+            </div>
+          </td>
+          <td class="p-3">
+            <div class="text-amber-400 text-xs font-semibold">${stars}</div>
+            <div class="text-[10px] text-slate-500">${lead.cnae_descricao || lead.origem_fonte}</div>
+          </td>
+          <td class="p-3">
+            ${
+              lead.whatsapp_url
+                ? `<a href="${lead.whatsapp_url}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 transition text-xs font-medium">
+                    <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> WhatsApp
+                  </a>`
+                : `<span class="text-slate-500 text-[11px]">Sem tel.</span>`
+            }
+            <div class="text-[11px] text-slate-400 mt-1">${lead.telefone_comercial || ''}</div>
+          </td>
+          <td class="p-3">
+            <select onchange="updateLeadStatus('${lead.id}', this.value)" class="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-emerald-500">
+              <option value="NOVO_LEAD" ${lead.status === 'NOVO_LEAD' ? 'selected' : ''}>Novo Lead</option>
+              <option value="PRIMEIRO_CONTATO" ${lead.status === 'PRIMEIRO_CONTATO' ? 'selected' : ''}>Primeiro Contato</option>
+              <option value="EM_NEGOCIACAO" ${lead.status === 'EM_NEGOCIACAO' ? 'selected' : ''}>Em Negociação</option>
+              <option value="CLIENTE_FECHADO" ${lead.status === 'CLIENTE_FECHADO' ? 'selected' : ''}>Fechado ✅</option>
+              <option value="DESCARTADO" ${lead.status === 'DESCARTADO' ? 'selected' : ''}>Descartado</option>
+            </select>
+          </td>
+          <td class="p-3 text-right">
+            <div class="flex items-center justify-end gap-1.5">
+              <button onclick="openNotesModal('${lead.id}')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="Editar anotação">
+                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+              </button>
+              <button onclick="deleteLead('${lead.id}')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-red-950 text-slate-400 hover:text-red-400 transition" title="Excluir">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+      })
+      .join('');
+  }
+
+  refreshIcons();
+}
+
+// -------------------------------------------------------------
+// CARDS TOUCH RESPONSIVOS PARA SMARTPHONE / CELULAR
+// -------------------------------------------------------------
+function renderMobileCards(leads) {
+  const container = document.getElementById('leads-mobile-list');
+  if (!container) return;
+
+  if (!leads || leads.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = leads
     .map((lead) => {
-      const stars = lead.rating ? `⭐ ${lead.rating.toFixed(1)} (${lead.total_reviews || 0})` : 'Sem reviews';
+      const stars = lead.rating ? `⭐ ${lead.rating.toFixed(1)} (${lead.total_reviews || 0})` : 'Sem avaliações';
       const isChecked = selectedLeadIds.has(lead.id) ? 'checked' : '';
+      const cleanPhone = lead.telefone_whatsapp || (lead.telefone_comercial ? lead.telefone_comercial.replace(/\D/g, '') : '');
 
       return `
-      <tr class="hover:bg-slate-800/40 transition">
-        <td class="p-3">
-          <input type="checkbox" onchange="toggleSelectLead('${lead.id}', this)" ${isChecked} class="rounded bg-slate-800 border-slate-700 text-emerald-500">
-        </td>
-        <td class="p-3">
-          <div class="font-bold text-slate-100 flex items-center gap-1.5 flex-wrap">
-            <span>${lead.nome_fantasia || lead.razao_social}</span>
-            ${lead.distancia_formatada ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-500/20 text-sky-400 border border-sky-500/30" title="Distância estimada">📍 ${lead.distancia_formatada}</span>` : ''}
-            ${lead.origem_fonte === 'BRASIL_API' ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" title="Comércio Real Oficial">Loja Real ✅</span>' : ''}
-            ${lead.site_url ? `<a href="${lead.site_url}" target="_blank" class="text-slate-500 hover:text-emerald-400" title="Acessar site"><i data-lucide="globe" class="w-3 h-3"></i></a>` : ''}
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-md space-y-2.5">
+        <!-- Topo: Nome, Distância e Checkbox -->
+        <div class="flex items-start justify-between gap-2">
+          <div class="flex items-start gap-2 flex-1 min-w-0">
+            <input type="checkbox" onchange="toggleSelectLead('${lead.id}', this)" ${isChecked} class="mt-1 rounded bg-slate-800 border-slate-700 text-emerald-500 w-4 h-4 flex-shrink-0">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <h3 class="font-bold text-white text-sm leading-tight">${lead.nome_fantasia || lead.razao_social}</h3>
+                ${lead.origem_fonte === 'BRASIL_API' ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Oficial ✅</span>' : ''}
+              </div>
+              <p class="text-[11px] text-slate-400 truncate mt-0.5">${lead.razao_social}</p>
+            </div>
           </div>
-          <div class="text-[11px] text-slate-400 truncate max-w-xs">${lead.razao_social}</div>
-          ${lead.anotacoes ? `<div class="text-[10px] text-amber-300/90 mt-0.5 flex items-center gap-1"><i data-lucide="tag" class="w-2.5 h-2.5"></i> ${lead.anotacoes}</div>` : ''}
-        </td>
-        <td class="p-3">
-          <div class="font-mono text-slate-300 text-[11px]">${lead.cnpj}</div>
-          <span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">${lead.porte}</span>
-        </td>
-        <td class="p-3">
-          <div class="text-slate-100 font-medium">${lead.bairro || 'Setor Central'}</div>
-          <div class="text-[11px] text-slate-400 flex items-center gap-1.5 flex-wrap">
-            <span>${lead.municipio} - ${lead.uf} ${lead.logradouro ? `• ${lead.logradouro}` : ''}</span>
-            ${lead.latitude && lead.longitude ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${lead.latitude},${lead.longitude}" target="_blank" class="inline-flex items-center gap-1 text-[10px] text-emerald-400 hover:text-emerald-300 font-medium" title="Abrir rota no Google Maps"><i data-lucide="navigation" class="w-3 h-3"></i> Rota</a>` : ''}
+          <div class="flex flex-col items-end gap-1 flex-shrink-0">
+            ${lead.distancia_formatada ? `<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-sky-500/20 text-sky-400 border border-sky-500/30">📍 ${lead.distancia_formatada}</span>` : ''}
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">${lead.porte}</span>
           </div>
-        </td>
-        <td class="p-3">
-          <div class="text-amber-400 text-xs font-semibold">${stars}</div>
-          <div class="text-[10px] text-slate-500">${lead.cnae_descricao || lead.origem_fonte}</div>
-        </td>
-        <td class="p-3">
-          ${
-            lead.whatsapp_url
-              ? `<a href="${lead.whatsapp_url}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 transition text-xs font-medium">
-                  <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> WhatsApp
-                </a>`
-              : `<span class="text-slate-500 text-[11px]">Sem tel.</span>`
-          }
-          <div class="text-[11px] text-slate-400 mt-1">${lead.telefone_comercial || ''}</div>
-        </td>
-        <td class="p-3">
-          <select onchange="updateLeadStatus('${lead.id}', this.value)" class="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-emerald-500">
-            <option value="NOVO_LEAD" ${lead.status === 'NOVO_LEAD' ? 'selected' : ''}>Novo Lead</option>
-            <option value="PRIMEIRO_CONTATO" ${lead.status === 'PRIMEIRO_CONTATO' ? 'selected' : ''}>Primeiro Contato</option>
-            <option value="EM_NEGOCIACAO" ${lead.status === 'EM_NEGOCIACAO' ? 'selected' : ''}>Em Negociação</option>
-            <option value="CLIENTE_FECHADO" ${lead.status === 'CLIENTE_FECHADO' ? 'selected' : ''}>Fechado ✅</option>
-            <option value="DESCARTADO" ${lead.status === 'DESCARTADO' ? 'selected' : ''}>Descartado</option>
-          </select>
-        </td>
-        <td class="p-3 text-right">
-          <div class="flex items-center justify-end gap-1.5">
-            <button onclick="openNotesModal('${lead.id}')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="Editar anotação">
+        </div>
+
+        <!-- CNPJ e Avaliação -->
+        <div class="flex items-center justify-between text-xs text-slate-400 bg-slate-950/70 px-2.5 py-1.5 rounded-lg border border-slate-800/80">
+          <span class="font-mono text-[11px] text-slate-300">${lead.cnpj}</span>
+          <span class="text-amber-400 font-semibold text-xs">${stars}</span>
+        </div>
+
+        <!-- Endereço com Botão Como Chegar -->
+        <div class="text-xs text-slate-300 space-y-1">
+          <p class="font-medium text-slate-200">${lead.bairro || 'Bairro'} - ${lead.municipio} / ${lead.uf}</p>
+          ${lead.logradouro ? `<p class="text-[11px] text-slate-400">${lead.logradouro} ${lead.numero ? `, nº ${lead.numero}` : ''}</p>` : ''}
+          ${lead.latitude && lead.longitude ? `
+            <a href="https://www.google.com/maps/dir/?api=1&destination=${lead.latitude},${lead.longitude}" target="_blank" class="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-semibold pt-0.5">
+              <i data-lucide="navigation" class="w-3.5 h-3.5"></i> Abrir Rota no Google Maps / Waze
+            </a>
+          ` : ''}
+        </div>
+
+        <!-- Anotação / Observação se existir -->
+        ${lead.anotacoes ? `
+          <div class="text-xs bg-slate-950/80 border border-amber-500/30 p-2 rounded-lg text-amber-300/90 flex items-start gap-1.5">
+            <i data-lucide="tag" class="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5"></i>
+            <span class="flex-1">${lead.anotacoes}</span>
+          </div>
+        ` : ''}
+
+        <!-- Botões de Contato (WhatsApp e Telefone) -->
+        <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800/80">
+          ${lead.whatsapp_url ? `
+            <a href="${lead.whatsapp_url}" target="_blank" class="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow">
+              <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> WhatsApp
+            </a>
+          ` : `
+            <button disabled class="w-full py-2 px-3 rounded-lg bg-slate-800/60 text-slate-500 text-xs font-medium cursor-not-allowed">
+              Sem WhatsApp
+            </button>
+          `}
+
+          ${cleanPhone ? `
+            <a href="tel:${cleanPhone}" class="w-full py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-xs flex items-center justify-center gap-1.5">
+              <i data-lucide="phone" class="w-3.5 h-3.5"></i> Ligar
+            </a>
+          ` : `
+            <button onclick="openNotesModal('${lead.id}')" class="w-full py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs flex items-center justify-center gap-1">
+              <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Anotar
+            </button>
+          `}
+        </div>
+
+        <!-- Seletor de Status CRM e Ações -->
+        <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-800/60">
+          <div class="flex items-center gap-1.5">
+            <span class="text-[11px] text-slate-400">Status:</span>
+            <select onchange="updateLeadStatus('${lead.id}', this.value)" class="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 focus:border-emerald-500">
+              <option value="NOVO_LEAD" ${lead.status === 'NOVO_LEAD' ? 'selected' : ''}>Novo Lead</option>
+              <option value="PRIMEIRO_CONTATO" ${lead.status === 'PRIMEIRO_CONTATO' ? 'selected' : ''}>Primeiro Contato</option>
+              <option value="EM_NEGOCIACAO" ${lead.status === 'EM_NEGOCIACAO' ? 'selected' : ''}>Em Negociação</option>
+              <option value="CLIENTE_FECHADO" ${lead.status === 'CLIENTE_FECHADO' ? 'selected' : ''}>Fechado ✅</option>
+              <option value="DESCARTADO" ${lead.status === 'DESCARTADO' ? 'selected' : ''}>Descartado</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-1">
+            <button onclick="openNotesModal('${lead.id}')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs" title="Editar anotação">
               <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
             </button>
-            <button onclick="deleteLead('${lead.id}')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-red-950 text-slate-400 hover:text-red-400 transition" title="Excluir">
+            <button onclick="deleteLead('${lead.id}')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-red-950 text-slate-400 hover:text-red-400 text-xs" title="Excluir">
               <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
             </button>
           </div>
-        </td>
-      </tr>
+        </div>
+      </div>
     `;
     })
     .join('');
-
-  refreshIcons();
 }
 
 function renderKanban() {
